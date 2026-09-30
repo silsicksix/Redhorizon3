@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>RedHorizon OSINT</title>
+    <meta name="description" content="Advanced OSINT visualization tool powered by Gemini 3. Features a sci-fi HUD interface, Maltego-style link analysis, and real-time web grounding." />
+    <meta property="og:title" content="RedHorizon OSINT" />
+    <meta property="og:description" content="Advanced OSINT visualization tool powered by Gemini 3. Features a sci-fi HUD interface, Maltego-style link analysis, and real-time web grounding." />
+    
+    <!-- PWA & Mobile Fullscreen Capabilities -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#ef4444" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="RedHorizon" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body class="bg-[#050505] text-[#f1f5f9] overflow-hidden select-none">
+    <div class="bg-grid-layer animate-grid-flow"></div>
+    <div class="bg-vignette"></div>
+    <div id="root"></div>
+    <div class="screen-flicker"></div>
+    <div class="scanline-overlay"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>

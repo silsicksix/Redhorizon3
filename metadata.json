@@ -1,0 +1,8 @@
+{
+  "name": "RedHorizon OSINT Ori",
+  "description": "Advanced OSINT visualization tool powered by Gemini 3. Features a sci-fi HUD interface, Maltego-style link analysis, and real-time web grounding.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,121 @@
+async function test() {
+  const endpoints = [
+    '/search/domain?query=test',
+    '/search/email?query=test',
+    '/search/ip?query=test',
+    '/search/username?query=test',
+    '/search/password?query=test',
+    '/search/hash?query=test',
+    '/search/name?query=test',
+    '/search/phone?query=test',
+    '/search/address?query=test',
+    '/search/vin?query=test',
+    '/search/plate?query=test',
+    '/search/cc?query=test',
+    '/search/ssn?query=test',
+    '/search/id?query=test',
+    '/search/passport?query=test',
+    '/search/dl?query=test',
+    '/search/dob?query=test',
+    '/search/gender?query=test',
+    '/search/race?query=test',
+    '/search/religion?query=test',
+    '/search/blood?query=test',
+    '/search/height?query=test',
+    '/search/weight?query=test',
+    '/search/eye?query=test',
+    '/search/hair?query=test',
+    '/search/build?query=test',
+    '/search/complexion?query=test',
+    '/search/marital?query=test',
+    '/search/education?query=test',
+    '/search/occupation?query=test',
+    '/search/income?query=test',
+    '/search/networth?query=test',
+    '/search/credit?query=test',
+    '/search/bankruptcy?query=test',
+    '/search/lien?query=test',
+    '/search/judgment?query=test',
+    '/search/eviction?query=test',
+    '/search/foreclosure?query=test',
+    '/search/criminal?query=test',
+    '/search/sexoffender?query=test',
+    '/search/warrant?query=test',
+    '/search/arrest?query=test',
+    '/search/traffic?query=test',
+    '/search/accident?query=test',
+    '/search/property?query=test',
+    '/search/vehicle?query=test',
+    '/search/vessel?query=test',
+    '/search/aircraft?query=test',
+    '/search/business?query=test',
+    '/search/license?query=test',
+    '/search/permit?query=test',
+    '/search/voter?query=test',
+    '/search/hunting?query=test',
+    '/search/fishing?query=test',
+    '/search/weapon?query=test',
+    '/search/concealed?query=test',
+    '/search/pilot?query=test',
+    '/search/dea?query=test',
+    '/search/npi?query=test',
+    '/search/upin?query=test',
+    '/search/medicare?query=test',
+    '/search/medicaid?query=test',
+    '/search/tricare?query=test',
+    '/search/champva?query=test',
+    '/search/ihs?query=test',
+    '/search/fep?query=test',
+    '/search/fehb?query=test',
+    '/search/cobra?query=test',
+    '/search/retiree?query=test',
+    '/search/dependent?query=test',
+    '/search/survivor?query=test',
+    '/search/veteran?query=test',
+    '/search/military?query=test',
+    '/search/civilian?query=test',
+    '/search/contractor?query=test',
+    '/search/foreign?query=test',
+    '/search/alien?query=test',
+    '/search/immigrant?query=test',
+    '/search/nonimmigrant?query=test',
+    '/search/refugee?query=test',
+    '/search/asylee?query=test',
+    '/search/parolee?query=test',
+    '/search/student?query=test',
+    '/search/exchange?query=test',
+    '/search/temporary?query=test',
+    '/search/permanent?query=test',
+    '/search/citizen?query=test',
+    '/search/national?query=test',
+    '/search/stateless?query=test',
+    '/?query=test',
+    '/?q=test',
+    '/?search=test',
+    '/search?search=test',
+    '/osint?search=test',
+    '/api/search?search=test',
+    '/api/v1/search?search=test',
+    '/lookup?search=test',
+    '/lookup?search=test'
+  ];
+  
+  for (const ep of endpoints) {
+    try {
+      const response = await fetch('https://horizon12.p.rapidapi.com' + ep, {
+        headers: {
+          'X-RapidAPI-Key': 'e3304b0136msha6cada0f2a5cd2bp1c0b3ajsn433531ea3aaa',
+          'X-RapidAPI-Host': 'horizon12.p.rapidapi.com'
+        }
+      });
+      const data = await response.text();
+      if (response.status !== 404) {
+        console.log(`Endpoint ${ep}: ${response.status} - ${data.substring(0, 100)}`);
+      }
+    } catch (error) {
+      console.error(`Endpoint ${ep} ERROR:`, error.message);
+    }
+  }
+}
+
+test();
