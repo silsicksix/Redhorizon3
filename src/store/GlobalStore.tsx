@@ -114,8 +114,8 @@ const reducer = (state: GlobalState, action: Action): GlobalState => {
                 visual: { ...state.config.visual, ...(loadedConfig.visual || {}) }
             } : state.config;
 
-            // Auto-migrate away from pro/older models to gemini-3.7-flash for default performance
-            if (!mergedConfig.modelName || mergedConfig.modelName.includes('pro') || mergedConfig.modelName === 'gemini-3.6-flash') {
+            // Auto-migrate away from deprecated pro/older models to modern flash models
+            if (!mergedConfig.modelName || mergedConfig.modelName.includes('pro') || mergedConfig.modelName === 'gemini-3.6-flash' || mergedConfig.modelName === 'gemini-1.5-flash') {
                 mergedConfig = { ...mergedConfig, modelName: 'gemini-3.7-flash' };
             }
 

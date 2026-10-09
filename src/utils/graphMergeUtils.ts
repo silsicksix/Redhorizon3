@@ -114,15 +114,26 @@ export function areNodesSyntacticallyEqual(nodeA: Partial<Node>, nodeB: Partial<
   const idA = extractNodeIdentifiers(nodeA);
   const idB = extractNodeIdentifiers(nodeB);
 
-  // 2. Direct exact label match (case-insensitive & trimmed)
-  if (idA.normalizedLabel && idB.normalizedLabel && idA.normalizedLabel === idB.normalizedLabel) {
+  // Guard: generic/placeholder labels should never be merged solely by label string match
+  const GENERIC_LABELS = new Set([
+    'new_target', 'new target', 'newtarget',
+    'target', 'suspect', 'unknown', 'person', 'individual',
+    'entity', 'node', 'poi', 'item', 'data', 'starting point',
+    'starting_point', 'record', 'rekod', 'source page', 'untitled'
+  ]);
+  const isGenericA = GENERIC_LABELS.has(idA.normalizedLabel) || /^entity\s*#?\d+$/i.test(idA.normalizedLabel);
+  const isGenericB = GENERIC_LABELS.has(idB.normalizedLabel) || /^entity\s*#?\d+$/i.test(idB.normalizedLabel);
+  const allowLabelMatch = !isGenericA && !isGenericB;
+
+  // 2. Direct exact label match (case-insensitive & trimmed) for specific/named entities
+  if (allowLabelMatch && idA.normalizedLabel && idB.normalizedLabel && idA.normalizedLabel === idB.normalizedLabel) {
     return true;
   }
 
-  // 3. Clean Alphanumeric label match (ignoring punctuation, spaces, brackets)
+  // 3. Clean Alphanumeric label match (ignoring punctuation, spaces, brackets) for specific named entities
   const alphaA = idA.normalizedLabel.replace(/[^a-z0-9]/g, '');
   const alphaB = idB.normalizedLabel.replace(/[^a-z0-9]/g, '');
-  if (alphaA && alphaB && alphaA.length >= 3 && alphaA === alphaB) {
+  if (allowLabelMatch && alphaA && alphaB && alphaA.length >= 3 && alphaA === alphaB) {
     return true;
   }
 

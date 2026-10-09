@@ -1589,7 +1589,7 @@ const GraphViewCanvas: React.FC<GraphViewCanvasProps> = ({
       d3.select(canvas).on('.zoom', null);
       d3.select(canvas).on('.drag', null);
     };
-  }, [data, visualConfig.linkDistance, visualConfig.nodeSize, layoutMode]);
+  }, [data, visualConfig.linkDistance, visualConfig.nodeSize, visualConfig.themeColor, layoutMode, nodeRenderMode, groupByType]);
 
   const handleInteraction = (event: React.MouseEvent | React.TouchEvent, isRightClick: boolean) => {
     if (isDraggingRef.current) return; // Ignore clicks if we are dragging

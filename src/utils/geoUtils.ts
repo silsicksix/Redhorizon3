@@ -8,8 +8,17 @@ export interface GeoLocation {
   source: string;
 }
 
-// In-memory fast cache to avoid re-serializing session cache inside render loops
+// In-memory fast cache with LRU bounded capacity to avoid memory leaks during long investigations
+const MAX_GEO_CACHE_SIZE = 500;
 const memoryGeoCache = new Map<string, GeoLocation | null>();
+
+function setBoundedGeoCache(key: string, val: GeoLocation | null) {
+  if (memoryGeoCache.size >= MAX_GEO_CACHE_SIZE) {
+    const firstKey = memoryGeoCache.keys().next().value;
+    if (firstKey) memoryGeoCache.delete(firstKey);
+  }
+  memoryGeoCache.set(key, val);
+}
 
 // Specific Malaysian towns, districts, mukims and landmarks
 export const MALAYSIA_TOWNS_DATABASE: Record<string, { lat: number; lon: number; state: string }> = {
@@ -458,7 +467,7 @@ export async function geocodeAddressAsync(query: string): Promise<GeoLocation | 
 
   const sessionCached = getSessionCache<GeoLocation>(cacheKey);
   if (sessionCached) {
-    memoryGeoCache.set(cacheKey, sessionCached);
+    setBoundedGeoCache(cacheKey, sessionCached);
     return sessionCached;
   }
 
@@ -482,7 +491,7 @@ export async function geocodeAddressAsync(query: string): Promise<GeoLocation | 
           name: first.display_name || cleaned,
           source: 'NOMINATIM_OSM_LIVE'
         };
-        memoryGeoCache.set(cacheKey, res);
+        setBoundedGeoCache(cacheKey, res);
         setSessionCache(cacheKey, res);
         return res;
       }
@@ -491,7 +500,7 @@ export async function geocodeAddressAsync(query: string): Promise<GeoLocation | 
     console.warn('[Geocoding API] Nominatim lookup error:', e);
   }
 
-  memoryGeoCache.set(cacheKey, null);
+  setBoundedGeoCache(cacheKey, null);
   return null;
 }
 
@@ -513,7 +522,7 @@ export function extractNodeCoordinates(node: Node): GeoLocation | null {
 
   const sessionCached = getSessionCache<GeoLocation>(cacheKey);
   if (sessionCached) {
-    memoryGeoCache.set(cacheKey, sessionCached);
+    setBoundedGeoCache(cacheKey, sessionCached);
     return sessionCached;
   }
 
@@ -628,7 +637,7 @@ export function extractNodeCoordinates(node: Node): GeoLocation | null {
     }
   }
 
-  memoryGeoCache.set(cacheKey, res);
+  setBoundedGeoCache(cacheKey, res);
   if (res) {
     setSessionCache(cacheKey, res);
   }
