@@ -337,6 +337,13 @@ export const WorkstationHeader: React.FC<WorkstationHeaderProps> = ({
                   <span>Google SOCINT Studio (CX)</span>
                 </button>
                 <button
+                  onClick={() => { setActiveMenu(null); onExecuteAction('OPEN_MODAL', 'social_recon'); }}
+                  className="w-full flex items-center gap-2 px-2.5 py-1.5 text-slate-200 hover:text-white hover:bg-cyan-950/70 rounded text-left transition-colors cursor-pointer"
+                >
+                  <Share2 size={12} className="text-pink-400" />
+                  <span>Social Recon &amp; Monocrawl (70+ Platform)</span>
+                </button>
+                <button
                   onClick={() => { setActiveMenu(null); onExecuteAction('OPEN_MODAL', 'dork_builder'); }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 text-slate-200 hover:text-white hover:bg-cyan-950/70 rounded text-left transition-colors cursor-pointer"
                 >

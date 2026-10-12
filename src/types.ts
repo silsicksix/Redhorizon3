@@ -193,6 +193,7 @@ export interface ModelConfig {
     openrouterModel?: string;
     agentMatrix?: AgentMatrixConfig;
     tavilyApiKey?: string; // SerpApi removed
+    monocrawlApiKey?: string; // Monocrawl 70+ Social Media MCP API Key
     rapidApiKey?: string; // Horizon12 RapidAPI key
     googleCseId?: string; // Google Custom Search Engine ID (SOCINT)
     googleCseApiKey?: string; // Google Custom Search API Key

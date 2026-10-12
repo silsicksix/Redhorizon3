@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Room": {
+      "title": "Room",
+      "description": "Tactical collaborative investigation room",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "passcode": { "type": "string" },
+        "isEliteOnly": { "type": "boolean" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "lastActive": { "type": "number" }
+      },
+      "required": ["id"]
+    },
+    "CollabMessage": {
+      "title": "CollabMessage",
+      "description": "Message, intel finding broadcast, or case file sync in tactical room",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderPhoto": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["senderId", "text", "type", "timestamp"]
+    },
+    "Presence": {
+      "title": "Presence",
+      "description": "Active operative presence and cursor state in room",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string" },
+        "lastSeen": { "type": "number" }
+      },
+      "required": ["uid", "lastSeen"]
+    },
+    "Workspace": {
+      "title": "Workspace",
+      "description": "Collaborative canvas state and graph data",
+      "type": "object",
+      "properties": {
+        "nodes": { "type": "string" },
+        "links": { "type": "string" },
+        "version": { "type": "number" },
+        "lastUpdated": { "type": "number" }
+      },
+      "required": ["lastUpdated"]
+    },
+    "AccessRequest": {
+      "title": "AccessRequest",
+      "description": "Operative access clearance requests and tier approvals",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["uid", "status"]
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "description": "System-wide relay and tactical settings",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" },
+        "value": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": "Room",
+      "description": "Tactical investigation rooms"
+    },
+    "/rooms/{roomId}/messages/{messageId}": {
+      "schema": "CollabMessage",
+      "description": "Tactical chat messages and entity broadcasts"
+    },
+    "/rooms/{roomId}/presence/{uid}": {
+      "schema": "Presence",
+      "description": "Real-time presence of operatives"
+    },
+    "/rooms/{roomId}/workspaces/{workspaceId}": {
+      "schema": "Workspace",
+      "description": "Shared canvas graph and investigations"
+    },
+    "/access_requests/{requestId}": {
+      "schema": "AccessRequest",
+      "description": "Operative clearance records"
+    },
+    "/system_config/{configId}": {
+      "schema": "SystemConfig",
+      "description": "Tactical server relay configurations"
+    }
+  }
+}

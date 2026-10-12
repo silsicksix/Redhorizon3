@@ -64,6 +64,7 @@ import {
   analyzeWatsonCanvasContext
 } from "./server/watsonEngine";
 import { executeGoogleSocintSearch } from "./server/googleCseService";
+import { testMonocrawlApiKey, executeMonocrawlSocialInvestigation } from "./server/monocrawlService";
 import {
   isSafePublicUrl,
   validateCommandSafety,
@@ -1196,6 +1197,30 @@ async function startServer() {
       } catch (err: any) {
           console.error('[GOOGLE SOCINT CSE ROUTE ERROR]', err);
           res.status(500).json({ success: false, error: err.message || 'Ralat semasa memproses carian Google CSE' });
+      }
+  });
+
+  // --- MONOCRAWL 70+ SOCIAL PLATFORMS MCP & HYBRID RECON ROUTE ---
+  app.all('/api/monocrawl/recon', async (req, res) => {
+      try {
+          const target = (req.method === 'POST' ? req.body?.target : req.query?.target) || '';
+          const targetType = (req.method === 'POST' ? req.body?.targetType : req.query?.targetType) || 'person';
+          const apiKey = (req.method === 'POST' ? req.body?.apiKey : req.query?.apiKey) || '';
+          const context = (req.method === 'POST' ? req.body?.context : req.query?.context) || '';
+
+          if (!target || typeof target !== 'string' || !target.trim()) {
+              return res.status(400).json({ success: false, error: 'Sasaran carian (handle/username/URL) diperlukan.' });
+          }
+
+          const result = await executeMonocrawlSocialInvestigation(target.trim(), String(targetType), {
+              apiKey: apiKey ? String(apiKey).trim() : undefined,
+              context: context ? String(context) : undefined
+          });
+
+          return res.json({ success: true, ...result });
+      } catch (err: any) {
+          console.error('[MONOCRAWL RECON ERROR]', err);
+          return res.status(500).json({ success: false, error: err.message || 'Ralat semasa memproses peninjauan Monocrawl.' });
       }
   });
 
@@ -2422,6 +2447,25 @@ Sila nilaikan intent pengguna (santai/umum vs operasi OSINT). Jika soalan umum, 
           }
       } catch (err: any) {
           res.status(500).json({ success: false, error: err.message || "Ujian sambungan RapidAPI gagal." });
+      }
+  });
+
+  // --- MONOCRAWL MCP TEST ENDPOINT ---
+  app.post("/api/monocrawl/test", async (req, res) => {
+      try {
+          const { apiKey } = req.body || {};
+          const key = (apiKey || "").trim();
+          if (!key) {
+              return res.json({
+                  success: true,
+                  status: "fallback_active",
+                  message: "Mod Fallback Hibrid Aktif: Sistem bersedia melakukan peninjauan 70+ platform menggunakan HTTP Probe & AI Search Grounding tanpa API key."
+              });
+          }
+          const result = await testMonocrawlApiKey(key);
+          res.json(result);
+      } catch (err: any) {
+          res.status(500).json({ success: false, message: err.message || "Ujian sambungan Monocrawl gagal." });
       }
   });
 

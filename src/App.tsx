@@ -5020,7 +5020,17 @@ OUTPUT FORMAT (STRICT JSON FOR GRAPH IMPORT):
             onClose={() => executeUIAction('CLOSE_MODALS')}
             onMinimizeToggle={() => handleMinimizeModal('social_recon')}
           >
-            <SocialRecon targetNode={activeNode} tavilyApiKey={config.tavilyApiKey} onComplete={(nodes) => { updateGraph({ nodes, links: nodes.map(n => ({ source: activeNode.id, target: n.id, label: 'social_link' })) }); executeUIAction('CLOSE_MODALS'); }} onLog={addLog} onClose={() => executeUIAction('CLOSE_MODALS')} />
+            <SocialRecon 
+              targetNode={activeNode} 
+              tavilyApiKey={config.tavilyApiKey} 
+              monocrawlApiKey={config.monocrawlApiKey}
+              onComplete={(nodes) => { 
+                updateGraph({ nodes, links: nodes.map(n => ({ source: activeNode.id, target: n.id, label: 'social_link' })) }); 
+                executeUIAction('CLOSE_MODALS'); 
+              }} 
+              onLog={addLog} 
+              onClose={() => executeUIAction('CLOSE_MODALS')} 
+            />
           </TacticalModalWrapper>
         )}
 

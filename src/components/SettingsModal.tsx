@@ -190,6 +190,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ currentConfig, onSaveConf
   const [showGoogleCseKey, setShowGoogleCseKey] = useState(false);
   const [googleCseStatus, setGoogleCseStatus] = useState<'idle' | 'testing' | 'success' | 'fail'>('idle');
   const [googleCseMsg, setGoogleCseMsg] = useState('');
+  const [showMonocrawlKey, setShowMonocrawlKey] = useState(false);
+  const [monocrawlStatus, setMonocrawlStatus] = useState<'idle' | 'testing' | 'success' | 'fail'>('idle');
+  const [monocrawlMsg, setMonocrawlMsg] = useState('');
 
   useEffect(() => {
     // Automatically clean up any accidental OpenRouter key copied to Gemini apiKey
@@ -683,6 +686,35 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ currentConfig, onSaveConf
       } catch (e: any) {
           setGoogleCseStatus('fail');
           setGoogleCseMsg(e.message || 'Gagal menghubungi pelayan backend untuk menguji Google CSE.');
+      }
+  };
+
+  const testMonocrawl = async () => {
+      setMonocrawlStatus('testing');
+      setMonocrawlMsg('');
+      const key = (config.monocrawlApiKey || '').trim();
+      if (!key) {
+          setMonocrawlStatus('success');
+          setMonocrawlMsg('Mod Fallback Hibrid Aktif: Sistem bersedia menyiasat 70+ platform media sosial menggunakan HTTP Prober + Gemini Live Grounding tanpa API key rasmi.');
+          return;
+      }
+      try {
+          const res = await fetch('/api/monocrawl/test', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ apiKey: key })
+          });
+          const data = await res.json().catch(() => null);
+          if (res.ok && data?.success) {
+              setMonocrawlStatus('success');
+              setMonocrawlMsg(data.message || 'Berjaya bersambung ke Monocrawl MCP API (70+ Media Sosial)!');
+          } else {
+              setMonocrawlStatus('fail');
+              setMonocrawlMsg(data?.message || data?.error || 'Kunci API tidak sah atau pelayan Monocrawl tidak dapat dihubungi.');
+          }
+      } catch (e: any) {
+          setMonocrawlStatus('fail');
+          setMonocrawlMsg(e.message || 'Gagal menghubungi pelayan backend untuk menguji Monocrawl.');
       }
   };
 
@@ -2002,6 +2034,105 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ currentConfig, onSaveConf
                                                 <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                                             )}
                                             <span className="leading-snug">{googleCseMsg}</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Monocrawl MCP & 70+ Social Platforms Section */}
+                                <div className="border-t border-gray-800 pt-3">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <label className="text-[10px] text-amber-400 uppercase font-bold flex items-center gap-1.5">
+                                            <Globe size={13} className="text-amber-400" />
+                                            <span>Monocrawl MCP / API (70+ Platform Media Sosial)</span>
+                                            <span className="px-1.5 py-0.2 bg-amber-950/80 border border-amber-700 text-[9px] rounded text-amber-300">
+                                                Mod Hibrid Pintar
+                                            </span>
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <a 
+                                                href="https://github.com/monocrawl/monocrawl-mcp" 
+                                                target="_blank" 
+                                                rel="noreferrer" 
+                                                className="text-amber-400 hover:underline text-[9px] flex items-center gap-0.5"
+                                            >
+                                                GitHub MCP <ExternalLink size={9} />
+                                            </a>
+                                            <span className="text-gray-600 text-[9px]">|</span>
+                                            <a 
+                                                href="https://monocrawl.com" 
+                                                target="_blank" 
+                                                rel="noreferrer" 
+                                                className="text-amber-400 hover:underline text-[9px] flex items-center gap-0.5"
+                                            >
+                                                Monocrawl API <ExternalLink size={9} />
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative flex-1 flex items-center">
+                                            <input 
+                                                type={showMonocrawlKey ? "text" : "password"} 
+                                                value={config.monocrawlApiKey || ''} 
+                                                onChange={(e) => setConfig({...config, monocrawlApiKey: e.target.value})} 
+                                                placeholder="Kunci Monocrawl (Atau kosongkan untuk Mod Fallback Hibrid Percuma)" 
+                                                className="w-full bg-[#111] border border-gray-700 text-amber-300 text-xs py-2 pl-3 pr-10 focus:border-amber-500 outline-none font-mono" 
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowMonocrawlKey(!showMonocrawlKey)}
+                                                className="absolute right-2 text-gray-400 hover:text-white p-1"
+                                                title={showMonocrawlKey ? "Sembunyikan Kunci" : "Pamerkan Kunci"}
+                                            >
+                                                {showMonocrawlKey ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={testMonocrawl}
+                                            disabled={monocrawlStatus === 'testing'}
+                                            className={`px-3 py-2 text-xs font-bold font-mono transition-all flex items-center gap-1.5 shrink-0 border ${
+                                                monocrawlStatus === 'testing'
+                                                    ? 'bg-amber-950/60 border-amber-500/50 text-amber-300 animate-pulse'
+                                                    : monocrawlStatus === 'success'
+                                                    ? 'bg-emerald-950/60 border-emerald-500/50 text-emerald-300 hover:bg-emerald-900/60'
+                                                    : monocrawlStatus === 'fail'
+                                                    ? 'bg-red-950/60 border-red-500/50 text-red-300 hover:bg-red-900/60'
+                                                    : 'bg-zinc-900 border-gray-700 text-zinc-300 hover:text-white hover:border-gray-500'
+                                            }`}
+                                        >
+                                            {monocrawlStatus === 'testing' ? (
+                                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                            )}
+                                            <span>{monocrawlStatus === 'testing' ? 'MENGUJI...' : monocrawlStatus === 'success' ? 'STATUS' : 'UJI SAMBUNGAN'}</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="mt-1.5 flex items-center justify-between text-[10px] text-gray-400">
+                                        <p className="leading-tight">
+                                            Menjejak profil sasaran di 70+ platform (X, TikTok, LinkedIn, Reddit, IG, GitHub, Telegram).
+                                            <span className="text-amber-300/90 ml-1">
+                                                {config.monocrawlApiKey?.trim() 
+                                                    ? "✨ Mod Rasmi Monocrawl MCP aktif."
+                                                    : "⚡ Mod Hibrid Percuma: Menggunakan Probing HTTP & Gemini AI Search Grounding (Zero API Cost)."}
+                                            </span>
+                                        </p>
+                                    </div>
+
+                                    {monocrawlMsg && (
+                                        <div className={`mt-2 p-2 rounded text-[11px] border font-mono flex items-start gap-2 ${
+                                            monocrawlStatus === 'success' 
+                                                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' 
+                                                : 'bg-red-950/40 border-red-500/40 text-red-300'
+                                        }`}>
+                                            {monocrawlStatus === 'success' ? (
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                            ) : (
+                                                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                                            )}
+                                            <span className="leading-snug">{monocrawlMsg}</span>
                                         </div>
                                     )}
                                 </div>

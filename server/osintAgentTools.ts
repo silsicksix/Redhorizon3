@@ -885,3 +885,55 @@ export async function runWebInspection(urlInput: string): Promise<ToolResult> {
     discoveredEntities: discovered,
   };
 }
+
+// 13. MONOCRAWL 70+ MULTI-PLATFORM SOCIAL RECON
+export async function runMonocrawlRecon(targetInput: string, customApiKey?: string): Promise<ToolResult> {
+  const { executeMonocrawlSocialInvestigation } = await import("./monocrawlService");
+  const result = await executeMonocrawlSocialInvestigation(targetInput, "person", { apiKey: customApiKey });
+  const discovered: ToolResult["discoveredEntities"] = [];
+
+  for (const prof of result.profiles) {
+    discovered.push({
+      label: `${prof.platformName}: @${prof.username}`,
+      type: "social",
+      details: `URL: ${prof.url}${prof.bio ? `\nBio: ${prof.bio}` : ''}`,
+      relationship: "owns_account"
+    });
+
+    if (prof.extractedEmails && prof.extractedEmails.length > 0) {
+      for (const email of prof.extractedEmails) {
+        discovered.push({
+          label: email,
+          type: "email",
+          details: `Email from ${prof.platformName}`,
+          relationship: "communicates_via"
+        });
+      }
+    }
+
+    if (prof.extractedPhones && prof.extractedPhones.length > 0) {
+      for (const phone of prof.extractedPhones) {
+        discovered.push({
+          label: phone,
+          type: "phone",
+          details: `Phone from ${prof.platformName}`,
+          relationship: "uses_phone"
+        });
+      }
+    }
+  }
+
+  return {
+    tool: "monocrawl_recon",
+    category: "social",
+    title: `Monocrawl 70+ Social Footprint for ${result.target}`,
+    summary: result.summary,
+    rawText: result.summary + "\n" + result.profiles.map(p => `- [${p.platformName}] @${p.username}: ${p.url}`).join("\n"),
+    structuredData: {
+      isMonocrawlLiveApiUsed: result.isMonocrawlLiveApiUsed,
+      platformsFound: result.platformsFoundCount,
+      profiles: result.profiles
+    },
+    discoveredEntities: discovered
+  };
+}

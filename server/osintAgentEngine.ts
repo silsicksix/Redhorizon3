@@ -12,6 +12,7 @@ import {
   runEmailValidate,
   runWaybackLookup,
   runWebInspection,
+  runMonocrawlRecon,
   ToolResult,
 } from "./osintAgentTools";
 
@@ -297,6 +298,7 @@ export async function executeAgentInvestigation(req: AgentScanRequest): Promise<
         log(` -> Dispatching GitHub & Cross-Platform tools for target: "${variant}"...`);
         taskPromises.push(runGithubRecon(cleanName, variant));
         taskPromises.push(runUsernameEnum(cleanName, variant));
+        taskPromises.push(runMonocrawlRecon(cleanName));
       }
     }
   }

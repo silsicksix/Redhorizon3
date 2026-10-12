@@ -2,6 +2,7 @@ import dns from "dns/promises";
 import crypto from "crypto";
 import { serverGenerateContent } from "./geminiService";
 import { cleanDomain, ToolResult } from "./osintAgentTools";
+import { executeMonocrawlSocialInvestigation } from "./monocrawlService";
 
 export type EnricherCategory = "poi" | "crypto" | "network" | "infrastructure";
 
@@ -121,6 +122,16 @@ export const ENRICHER_CATALOG: EnricherDefinition[] = [
     applicableTypes: ["person", "company", "organization", "target"],
     icon: "Building2",
     badge: "KORPORAT & SSM",
+    priority: 6,
+  },
+  {
+    id: "monocrawl_social_recon",
+    name: "Monocrawl 70+ Platform Social Footprint",
+    category: "poi",
+    description: "Merayap 70+ platform media sosial & carian serentak (Instagram, TikTok, X, Reddit, Facebook, LinkedIn, YouTube, GitHub) untuk merungkai profil, pautan bio, dan avatar.",
+    applicableTypes: ["person", "social", "username", "target", "organization"],
+    icon: "Globe",
+    badge: "MONOCRAWL 70+",
     priority: 6,
   },
   {
@@ -892,6 +903,24 @@ export async function runModularEnricher(
       return await executePoiNricDemographics(target);
     case "poi_vehicle_plate":
       return await executePoiVehiclePlate(target);
+    case "monocrawl_social_recon":
+    case "poi_social_deep_recon": {
+      const monoResult = await executeMonocrawlSocialInvestigation(target, targetType, { context });
+      return {
+        enricherId,
+        enricherName: enricherDef.name,
+        category: "poi",
+        target,
+        targetType,
+        summary: monoResult.summary,
+        discoveredNodes: monoResult.discoveredNodes,
+        discoveredLinks: monoResult.discoveredLinks,
+        structuredData: { profiles: monoResult.profiles, platformsFound: monoResult.platformsFoundCount },
+        riskLevel: monoResult.riskScore > 70 ? "high" : monoResult.riskScore > 40 ? "medium" : "low",
+        executionTimeMs: monoResult.executionTimeMs,
+        sources: monoResult.sources
+      };
+    }
     case "crypto_chain_detect":
     case "crypto_wallet_balance":
       return await executeCryptoBalance(target);

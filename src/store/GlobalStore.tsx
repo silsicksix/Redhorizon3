@@ -50,6 +50,7 @@ const initialState: GlobalState = {
         modelName: 'gemini-3.7-flash', 
         apiKey: '', 
         tavilyApiKey: '', 
+        monocrawlApiKey: '',
         googleCseId: '53a0041f2f24f4e3b',
         googleCseApiKey: '',
         thinkingBudget: 0, 

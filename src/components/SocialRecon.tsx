@@ -32,6 +32,7 @@ import { searchTavilyImages } from '../services/searchService';
 interface SocialReconProps {
   targetNode: Node;
   tavilyApiKey: string;
+  monocrawlApiKey?: string;
   onClose: () => void;
   onComplete: (nodes: Node[]) => void;
   onLog: (msg: string, type: 'info' | 'error' | 'success' | 'warning') => void;
@@ -51,12 +52,16 @@ const PLATFORM_COLORS: Record<string, { bg: string; text: string; border: string
   Telegram: { bg: 'bg-sky-950/60', text: 'text-sky-400', border: 'border-sky-700' },
 };
 
-const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onClose, onComplete, onLog }) => {
-  const [activeTab, setActiveTab] = useState<'smart_resolve' | 'multi_sweep' | 'dork_matrix'>('smart_resolve');
+const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, monocrawlApiKey, onClose, onComplete, onLog }) => {
+  const [activeTab, setActiveTab] = useState<'monocrawl' | 'smart_resolve' | 'multi_sweep' | 'dork_matrix'>('monocrawl');
   const [customTarget, setCustomTarget] = useState(targetNode.label || '');
   const [keywords, setKeywords] = useState('');
   const [loading, setLoading] = useState(false);
   const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  // Tab 0: Monocrawl 70+ Recon State
+  const [monocrawlResult, setMonocrawlResult] = useState<any>(null);
+  const [selectedMonocrawlProfiles, setSelectedMonocrawlProfiles] = useState<Set<number>>(new Set());
 
   // Tab 1: Smart Resolution State
   const [smartResult, setSmartResult] = useState<SmartSocialResolutionResult | null>(null);
@@ -79,6 +84,95 @@ const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onC
     setCopiedText(id);
     setTimeout(() => setCopiedText(null), 2000);
     onLog(`Disalin ke papan klip: "${text}"`, 'info');
+  };
+
+  // --- MONOCRAWL 70+ RECON EXECUTION ---
+  const handleExecuteMonocrawl = async () => {
+    const targetQuery = customTarget.trim() || targetNode.label;
+    if (!targetQuery) return;
+
+    setLoading(true);
+    setMonocrawlResult(null);
+    onLog(`[Monocrawl MCP Recon] Memulakan peninjauan multi-platform (70+ Media Sosial) bagi "${targetQuery}"...`, 'info');
+
+    try {
+      const res = await fetch('/api/monocrawl/recon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          target: targetQuery,
+          targetType: targetNode.type || 'person',
+          apiKey: monocrawlApiKey || '',
+          context: keywords
+        })
+      });
+
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        setMonocrawlResult(data);
+        if (data.profiles && data.profiles.length > 0) {
+          setSelectedMonocrawlProfiles(new Set(data.profiles.map((_: any, idx: number) => idx)));
+          const modeUsed = data.isMonocrawlLiveApiUsed ? 'Monocrawl Live MCP API' : 'Resilient Hybrid Fallback Prober';
+          onLog(`[Monocrawl] Berjaya menemui ${data.profiles.length} profil media sosial sah menggunakan mod [${modeUsed}].`, 'success');
+        } else {
+          onLog(`[Monocrawl] Selesai imbasan. Tiada profil awam sepadan ditemui untuk "${targetQuery}".`, 'warning');
+        }
+      } else {
+        throw new Error(data?.error || 'Gagal menyiasat profil melalui Monocrawl.');
+      }
+    } catch (e: any) {
+      onLog(`Ralat Monocrawl Recon: ${e.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportMonocrawl = () => {
+    if (!monocrawlResult) return;
+    const nodesToImport: Node[] = [];
+    const profiles = monocrawlResult.profiles || [];
+    const selectedProfs = profiles.filter((_: any, idx: number) => selectedMonocrawlProfiles.has(idx));
+
+    selectedProfs.forEach((prof: any, idx: number) => {
+      const profileNodeId = `prof_${prof.platform}_${prof.username.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${Date.now()}_${idx}`;
+      nodesToImport.push({
+        id: profileNodeId,
+        label: `${prof.platformName || prof.platform}: @${prof.username}`,
+        type: 'social',
+        details: `PLATFORM: ${prof.platformName || prof.platform}\nUSERNAME: @${prof.username}\nURL: ${prof.url}${prof.displayName ? `\nNAMA: ${prof.displayName}` : ''}${prof.bio ? `\nBIO: ${prof.bio}` : ''}${prof.followers ? `\nFOLLOWERS: ${prof.followers}` : ''}${prof.location ? `\nLOKASI: ${prof.location}` : ''}`,
+        imageUrl: prof.avatarUrl,
+        confidenceScore: 95,
+        x: targetNode.x ? targetNode.x + ((idx % 3) * 160 - 160) : undefined,
+        y: targetNode.y ? targetNode.y + (Math.floor(idx / 3) * 90 + 70) : undefined,
+        metadata: {
+          platform: prof.platform,
+          username: prof.username,
+          url: prof.url,
+          avatarUrl: prof.avatarUrl,
+          extractedEmails: prof.extractedEmails,
+          extractedPhones: prof.extractedPhones
+        }
+      });
+    });
+
+    onComplete(nodesToImport);
+    onLog(`[Kanvas] Berjaya mengimport ${nodesToImport.length} profil media sosial Monocrawl ke kanvas siasatan.`, 'success');
+  };
+
+  const toggleMonocrawlSelection = (index: number) => {
+    const next = new Set(selectedMonocrawlProfiles);
+    if (next.has(index)) next.delete(index);
+    else next.add(index);
+    setSelectedMonocrawlProfiles(next);
+  };
+
+  const toggleMonocrawlSelectAll = () => {
+    const profiles = monocrawlResult?.profiles || [];
+    if (selectedMonocrawlProfiles.size === profiles.length) {
+      setSelectedMonocrawlProfiles(new Set());
+    } else {
+      setSelectedMonocrawlProfiles(new Set(profiles.map((_: any, i: number) => i)));
+    }
   };
 
   // --- SMART RESOLUTION EXECUTION ---
@@ -227,10 +321,21 @@ const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onC
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 self-start sm:self-auto overflow-x-auto max-w-full">
+          <button
+            onClick={() => setActiveTab('monocrawl')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              activeTab === 'monocrawl'
+                ? 'bg-amber-400 text-black shadow-md shadow-amber-400/20 font-black'
+                : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-950/40'
+            }`}
+          >
+            <Globe size={13} className={activeTab === 'monocrawl' ? 'text-black' : 'text-amber-400'} />
+            <span>Monocrawl 70+ Recon</span>
+          </button>
           <button
             onClick={() => setActiveTab('smart_resolve')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'smart_resolve'
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -241,7 +346,7 @@ const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onC
           </button>
           <button
             onClick={() => setActiveTab('multi_sweep')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'multi_sweep'
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -252,7 +357,7 @@ const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onC
           </button>
           <button
             onClick={() => setActiveTab('dork_matrix')}
-            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
               activeTab === 'dork_matrix'
                 ? 'bg-cyan-500 text-black shadow-md shadow-cyan-500/20'
                 : 'text-slate-400 hover:text-white hover:bg-slate-900'
@@ -317,6 +422,186 @@ const SocialRecon: React.FC<SocialReconProps> = ({ targetNode, tavilyApiKey, onC
       {/* Main Content Area based on Tab */}
       <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-4">
         
+        {/* ==================================================== */}
+        {/* TAB 0: MONOCRAWL MCP & 70+ SOCIAL MEDIA RECON PANEL  */}
+        {/* ==================================================== */}
+        {activeTab === 'monocrawl' && (
+          <div className="space-y-4">
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <button
+                onClick={handleExecuteMonocrawl}
+                disabled={loading}
+                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black font-black py-3 rounded-xl uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-950/50 disabled:opacity-50 cursor-pointer"
+              >
+                {loading ? <Loader2 className="animate-spin text-black" size={18} /> : <Globe size={18} />}
+                <span>{loading ? `Meninjau 70+ Platform bagi "${customTarget}"...` : 'Jalankan Monocrawl Recon (70+ Platform)'}</span>
+              </button>
+
+              {monocrawlResult && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleMonocrawlSelectAll}
+                    className="px-3 py-2 bg-slate-900 border border-slate-700 hover:border-slate-500 text-xs rounded-lg flex items-center gap-1.5 cursor-pointer text-slate-200"
+                  >
+                    {selectedMonocrawlProfiles.size === (monocrawlResult.profiles?.length || 0) ? <CheckSquare size={14} className="text-amber-400" /> : <Square size={14} />}
+                    <span>Semua ({selectedMonocrawlProfiles.size}/{monocrawlResult.profiles?.length || 0})</span>
+                  </button>
+                  <button
+                    onClick={handleImportMonocrawl}
+                    disabled={selectedMonocrawlProfiles.size === 0}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-black text-xs rounded-lg flex items-center gap-1.5 shadow-md shadow-emerald-950/50 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Plot ke Graf ({selectedMonocrawlProfiles.size})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Mode & Engine Status Header */}
+            <div className="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span className="font-bold text-slate-300">Enjin:</span>
+                <span className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                  monocrawlApiKey?.trim() 
+                    ? 'bg-emerald-950/80 border border-emerald-600 text-emerald-300' 
+                    : 'bg-amber-950/80 border border-amber-600 text-amber-300'
+                }`}>
+                  {monocrawlApiKey?.trim() ? '✨ MONOCRAWL MCP LIVE API AKTIF' : '⚡ RESILIENT HYBRID PROBER (PERCUMA)'}
+                </span>
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono">
+                {monocrawlApiKey?.trim() ? 'Menggunakan Kunci API Dikonfigurasi' : '5-10 Carian/Hari: 100% Percuma & Resilient Fallback'}
+              </div>
+            </div>
+
+            {/* If not searched yet */}
+            {!monocrawlResult && !loading && (
+              <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 text-xs space-y-3">
+                <div className="flex items-center gap-2 text-amber-400 font-bold">
+                  <Globe size={16} />
+                  <span>Keupayaan Enjin Monocrawl 70+ Platform:</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
+                  <div className="p-3 bg-black/40 border border-slate-800 rounded-lg space-y-1">
+                    <div className="text-amber-400 font-bold">Media Sosial Arus Perdana</div>
+                    <p className="text-slate-400">Instagram, X (Twitter), TikTok, Facebook, Reddit, YouTube, LinkedIn, Threads, Telegram.</p>
+                  </div>
+                  <div className="p-3 bg-black/40 border border-slate-800 rounded-lg space-y-1">
+                    <div className="text-amber-400 font-bold">Pembangun & Teknologi</div>
+                    <p className="text-slate-400">GitHub, GitLab, Gravatar, HackerNews, Medium, Substack, Dev.to, Keybase.</p>
+                  </div>
+                  <div className="p-3 bg-black/40 border border-slate-800 rounded-lg space-y-1">
+                    <div className="text-amber-400 font-bold">E-Commerce & Forum</div>
+                    <p className="text-slate-400">Mudah.my, Carousell, Shopee, Steam, Twitch, Pinterest, Spotify, Lowyat.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Results Grid */}
+            {monocrawlResult && (
+              <div className="space-y-3">
+                {/* Result Summary Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-900/60 border border-slate-800 p-2.5 rounded-lg text-xs">
+                  <div className="flex items-center gap-3">
+                    <span className="text-slate-400">Ditemui: <strong className="text-amber-400 font-mono">{monocrawlResult.profiles?.length || 0}</strong> profil</span>
+                    <span className="text-slate-400">Skor Risiko: <strong className="text-rose-400 font-mono">{monocrawlResult.riskScore || 0}%</strong></span>
+                    <span className="text-slate-400">Masa: <strong className="text-cyan-400 font-mono">{monocrawlResult.executionTimeMs || 0}ms</strong></span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 font-mono">
+                    Sumber: {monocrawlResult.sources?.join(', ') || 'Monocrawl'}
+                  </div>
+                </div>
+
+                {/* Profiles Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1 custom-scrollbar">
+                  {monocrawlResult.profiles?.map((prof: any, idx: number) => {
+                    const isSelected = selectedMonocrawlProfiles.has(idx);
+                    const colorScheme = PLATFORM_COLORS[prof.platformName] || PLATFORM_COLORS[prof.platform] || { bg: 'bg-slate-900', text: 'text-amber-400', border: 'border-slate-700' };
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => toggleMonocrawlSelection(idx)}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-amber-950/20 border-amber-500/80 shadow-md shadow-amber-950/30'
+                            : 'bg-black/60 border-slate-800 hover:border-slate-700 opacity-75'
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleMonocrawlSelection(idx); }}
+                            className="mt-0.5"
+                          >
+                            {isSelected ? <CheckSquare size={16} className="text-amber-400" /> : <Square size={16} className="text-slate-600" />}
+                          </button>
+
+                          {prof.avatarUrl ? (
+                            <img src={prof.avatarUrl} alt={prof.username} className="w-10 h-10 rounded-full object-cover border border-slate-700 shrink-0" onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }} />
+                          ) : (
+                            <div className="w-10 h-10 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 shrink-0 font-bold text-xs uppercase">
+                              {prof.platform.substring(0, 2)}
+                            </div>
+                          )}
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold border ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border}`}>
+                                {prof.platformName || prof.platform}
+                              </span>
+                              <a
+                                href={prof.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-[10px] text-slate-400 hover:text-cyan-400 flex items-center gap-0.5"
+                              >
+                                Buka <ExternalLink size={9} />
+                              </a>
+                            </div>
+
+                            <div className="font-bold text-white text-xs truncate mt-1">
+                              @{prof.username}
+                              {prof.displayName && <span className="text-slate-400 font-normal ml-1">({prof.displayName})</span>}
+                            </div>
+
+                            {prof.bio && (
+                              <p className="text-[11px] text-slate-300 mt-1 line-clamp-2 leading-snug">
+                                {prof.bio}
+                              </p>
+                            )}
+
+                            {/* Followers / Location / Details */}
+                            <div className="flex items-center gap-3 mt-2 text-[10px] text-slate-400 flex-wrap">
+                              {prof.followers && (
+                                <span>👥 {prof.followers} pengikut</span>
+                              )}
+                              {prof.location && (
+                                <span>📍 {prof.location}</span>
+                              )}
+                              {prof.extractedEmails && prof.extractedEmails.length > 0 && (
+                                <span className="text-cyan-300 font-mono">✉️ {prof.extractedEmails.join(', ')}</span>
+                              )}
+                              {prof.extractedPhones && prof.extractedPhones.length > 0 && (
+                                <span className="text-emerald-300 font-mono">📞 {prof.extractedPhones.join(', ')}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ==================================================== */}
         {/* TAB 1: SMART DE-OBFUSCATOR & HANDLE <-> NAME RESOLVER */}
         {/* ==================================================== */}
